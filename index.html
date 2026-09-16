@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>课堂分组信息填报</title>
+<style>
+  :root{
+    --primary:#4f46e5;
+    --primary-dark:#4338ca;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --border:#e5e7eb;
+    --danger:#dc2626;
+    --success:#16a34a;
+    --bg-card:#ffffff;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    padding:40px 16px 72px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+                "Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    background:linear-gradient(160deg,#eef2ff 0%,#f8fafc 45%,#e0f2fe 100%);
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:860px; margin:0 auto; }
+
+  /* ---------- 页头 ---------- */
+  .page-header{ text-align:center; margin-bottom:28px; }
+  .page-header h1{ margin:0 0 10px; font-size:28px; letter-spacing:1px; }
+  .page-header p{ margin:0; color:var(--muted); font-size:14px; }
+
+  /* ---------- 卡片 ---------- */
+  .card{
+    background:var(--bg-card);
+    border-radius:18px;
+    padding:26px;
+    margin-bottom:22px;
+    box-shadow:0 12px 32px rgba(30,41,59,.10), 0 2px 6px rgba(30,41,59,.04);
+  }
+
+  /* ---------- 表单 ---------- */
+  .pair{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .pair input{
+    flex:1 1 200px;
+    min-width:0;
+    padding:14px 16px;
+    font-size:16px;
+    color:var(--text);
+    background:#f9fafb;
+    border:2px solid var(--border);
+    border-radius:12px;
+    outline:none;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+  }
+  .pair input:focus{
+    border-color:var(--primary);
+    background:#fff;
+    box-shadow:0 0 0 4px rgba(79,70,229,.12);
+  }
+  .and{ flex:0 0 auto; font-size:15px; font-weight:600; color:var(--muted); }
+
+  .submit{
+    width:100%;
+    margin-top:18px;
+    padding:14px 20px;
+    font-size:16px;
+    font-weight:600;
+    color:#fff;
+    background:linear-gradient(135deg,#6366f1,#4f46e5);
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    box-shadow:0 6px 16px rgba(79,70,229,.28);
+    transition:transform .15s, box-shadow .2s, opacity .2s;
+  }
+  .submit:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 10px 22px rgba(79,70,229,.34); }
+  .submit:active:not(:disabled){ transform:translateY(0); }
+  .submit:disabled{ opacity:.6; cursor:not-allowed; }
+
+  /* ---------- 提示 ---------- */
+  .msg{
+    display:none;
+    margin-top:14px;
+    padding:11px 14px;
+    border-radius:10px;
+    font-size:14px;
+  }
+  .msg.show{ display:block; animation:fadeIn .2s ease; }
+  .msg.success{ background:#ecfdf5; color:var(--success); border:1px solid #a7f3d0; }
+  .msg.error{ background:#fef2f2; color:var(--danger); border:1px solid #fecaca; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;} }
+
+  /* ---------- 列表 ---------- */
+  .list-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .list-head h2{ margin:0; font-size:17px; }
+  .count{ font-size:13px; color:var(--muted); }
+  .count b{ color:var(--primary); font-size:16px; }
+
+  ul.groups{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  li.group{
+    display:flex; align-items:center; gap:14px;
+    padding:14px 16px;
+    background:#fbfcff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  li.group:hover{ border-color:#c7d2fe; box-shadow:0 4px 12px rgba(79,70,229,.08); }
+  .badge{
+    flex:0 0 auto;
+    padding:4px 10px;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
+    color:var(--primary-dark);
+    background:#eef2ff;
+    border-radius:999px;
+  }
+  .names{ flex:1 1 auto; font-size:16px; font-weight:500; word-break:break-all; }
+  .names em{ font-style:normal; color:#a5b4fc; margin:0 5px; }
+  .time{ flex:0 0 auto; font-size:12px; color:#9ca3af; white-space:nowrap; }
+  .del{
+    flex:0 0 auto;
+    padding:6px 8px;
+    font-size:13px;
+    color:#9ca3af;
+    background:transparent;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    transition:background .2s, color .2s;
+  }
+  .del:hover:not(:disabled){ background:#fef2f2; color:var(--danger); }
+  .del:disabled{ opacity:.5; cursor:not-allowed; }
+  .empty{ margin:0; padding:24px 0; text-align:center; color:#9ca3af; font-size:14px; }
+
+  @media (max-width:560px){
+    .page-header h1{ font-size:22px; }
+    .and{ display:none; }
+    .pair input{ flex:1 1 100%; }
+    .time{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-header">
+    <h1>课堂分组信息填报</h1>
+    <p>两人一组，填写两位同学的姓名后提交即可</p>
+  </header>
+
+  <!-- 填报表单 -->
+  <section class="card">
+    <form id="groupForm" autocomplete="off">
+      <div class="pair">
+        <input id="name1" type="text" maxlength="20" placeholder="第一位同学姓名" required>
+        <span class="and">与</span>
+        <input id="name2" type="text" maxlength="20" placeholder="第二位同学姓名" required>
+      </div>
+      <button id="submitBtn" class="submit" type="submit">提交填报</button>
+      <div id="msg" class="msg"></div>
+    </form>
+  </section>
+
+  <!-- 已填报列表 -->
+  <section class="card">
+    <div class="list-head">
+      <h2>已填报分组</h2>
+      <span class="count">共 <b id="stat">0</b> 组</span>
+    </div>
+    <ul id="list" class="groups"></ul>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var form       = document.getElementById('groupForm');
+  var name1Input = document.getElementById('name1');
+  var name2Input = document.getElementById('name2');
+  var submitBtn  = document.getElementById('submitBtn');
+  var msgEl      = document.getElementById('msg');
+  var listEl     = document.getElementById('list');
+  var statEl     = document.getElementById('stat');
+
+  var msgTimer = null;
+
+  /* 防止 XSS */
+  function escapeHtml(str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function showMessage(text, type) {
+    clearTimeout(msgTimer);
+    msgEl.textContent = text;
+    msgEl.className = 'msg show ' + type;
+    msgTimer = setTimeout(function () { msgEl.className = 'msg'; }, 3500);
+  }
+
+  /* 渲染分组列表 */
+  function render(groups) {
+    statEl.textContent = groups.length;
+
+    if (!groups.length) {
+      listEl.innerHTML = '<p class="empty">还没有填报记录，快来填写第一组吧 ~</p>';
+      return;
+    }
+
+    listEl.innerHTML = groups.map(function (g) {
+      return '<li class="group">' +
+               '<span class="badge">第 ' + g.id + ' 组</span>' +
+               '<span class="names">' + escapeHtml(g.name1) +
+                 '<em>&amp;</em>' + escapeHtml(g.name2) + '</span>' +
+               '<span class="time">' + escapeHtml(g.created_at || '') + '</span>' +
+               // '<button class="del" type="button" data-id="' + g.id + '">删除</button>' +
+             '</li>';
+    }).join('');
+  }
+
+  /* 拉取列表 */
+  async function loadGroups() {
+    try {
+      var res  = await fetch('/api/groups', { cache: 'no-store' });
+      var data = await res.json();
+      render(data.groups || []);
+    } catch (err) {
+      showMessage('加载数据失败，请确认后端服务已启动', 'error');
+    }
+  }
+
+  /* 提交填报 */
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    var name1 = name1Input.value.trim();
+    var name2 = name2Input.value.trim();
+
+    if (!name1 || !name2) {
+      showMessage('请填写两位同学的姓名', 'error');
+      return;
+    }
+    if (name1 === name2) {
+      showMessage('同一组内两位同学的姓名不能相同', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中…';
+
+    try {
+      var res = await fetch('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name1: name1, name2: name2 })
+      });
+      var data = await res.json().catch(function () { return {}; });
+
+      if (!res.ok) {
+        showMessage(data.error || '提交失败，请稍后重试', 'error');
+        return;
+      }
+
+      form.reset();
+      name1Input.focus();
+      showMessage('填报成功：' + name1 + ' & ' + name2, 'success');
+      await loadGroups();
+
+    } catch (err) {
+      showMessage('网络异常，提交失败', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '提交填报';
+    }
+  });
+
+  /* 删除分组（事件委托） */
+  listEl.addEventListener('click', async function (e) {
+    var btn = e.target.closest('.del');
+    if (!btn) return;
+
+    var id = btn.dataset.id;
+    if (!confirm('确定要删除第 ' + id + ' 组吗？')) return;
+
+    btn.disabled = true;
+
+    try {
+      var res  = await fetch('/api/groups/' + encodeURIComponent(id), { method: 'DELETE' });
+      var data = await res.json().catch(function () { return {}; });
+
+      if (!res.ok) {
+        showMessage(data.error || '删除失败', 'error');
+        btn.disabled = false;
+        return;
+      }
+
+      showMessage('已删除第 ' + id + ' 组', 'success');
+      await loadGroups();
+
+    } catch (err) {
+      showMessage('网络异常，删除失败', 'error');
+      btn.disabled = false;
+    }
+  });
+
+  /* 初始化 */
+  loadGroups();
+})();
+</script>
+</body>
+</html>
