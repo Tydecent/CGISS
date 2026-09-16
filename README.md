@@ -27,6 +27,12 @@
 - **空状态提示**：无任何记录时显示友好的引导文案。
 - **响应式布局**：适配手机、平板与桌面，窄屏下自动调整输入框排布。
 
+### 数据导出
+
+- **一键导出 Excel**：运行 `python export_xlsx.py` 即可把 `groups.json` 导出为 xlsx 表格。
+- **规范表头**：输出表头为 `序号 | 学生1 | 学生2`，按组号升序、序号连续编号。
+- **只读操作**：导出过程不修改数据文件，服务运行期间也能安全执行。
+
 ### 安全与健壮性
 
 - **XSS 防护**：所有用户输入在渲染前均经过 HTML 转义。
@@ -42,7 +48,9 @@
 ClassGroupInformationSubmissionSystem/
 ├── app.py          # Flask 后端：页面路由、REST API、数据持久化
 ├── index.html      # 前端单页：样式、表单、列表渲染与交互逻辑
+├── export_xlsx.py  # 导出脚本：把 groups.json 转成 xlsx 表格
 ├── groups.json     # 数据文件（首次提交后自动生成，无需手动创建）
+├── requirements.txt # 依赖清单
 └── README.md       # 本文档
 ```
 
@@ -50,31 +58,34 @@ ClassGroupInformationSubmissionSystem/
 | --- | --- |
 | `app.py` | 应用入口。包含存储层（`load_data` / `save_data`）、页面路由与 3 个 API 接口。 |
 | `index.html` | 无外部依赖的单文件前端，由 `app.py` 通过 `/` 路由直接返回。 |
+| `export_xlsx.py` | 命令行脚本，读取 `groups.json` 导出为 xlsx（表头：序号 / 学生1 / 学生2）。 |
 | `groups.json` | 运行期自动生成，保存全部分组记录。程序会自动创建，无需手工新建。 |
 | `groups.json.<时间戳>.bak` | 仅在数据文件损坏时自动生成的隔离备份，用于人工恢复。 |
+| `groups.xlsx` | 运行 `export_xlsx.py` 后生成的导出结果。 |
 
 ## 环境要求
 
 | 依赖 | 版本要求 | 说明 |
 | --- | --- | --- |
 | Python | 3.9 或更高（开发环境为 3.12.13） | 下限由 Flask 3.x 决定；代码本身未使用高版本专有语法。 |
-| Flask | 3.x（开发环境为 3.1.3） | 唯一的第三方依赖。 |
+| Flask | 3.x（开发环境为 3.1.3） | 提供 Web 服务，`app.py` 依赖。 |
+| openpyxl | 3.x | 仅 `export_xlsx.py` 依赖，用于生成 xlsx 文件；不导出数据时可不安装。 |
 
-其余模块（`os`、`json`、`threading`、`datetime`）均为 Python 标准库，
-因此除 Flask 外无需安装任何其他包。
+`app.py` 其余模块（`os`、`json`、`threading`、`datetime`）均为 Python 标准库，
+因此运行服务只需安装 Flask；`export_xlsx.py` 额外需要 openpyxl。
 
 ## 快速开始
 
 ### 1. 安装依赖
 
 ```bash
-pip install flask
+pip install flask openpyxl
 ```
 
 如需固定版本（可选）：
 
 ```bash
-pip install "flask>=3.0,<4.0"
+pip install "flask>=3.0,<4.0" "openpyxl>=3.0,<4.0"
 ```
 
 ### 2. 启动服务
@@ -313,6 +324,62 @@ DELETE /api/groups/<group_id>
 2. 打开 `.bak` 文件检查内容，手工修复其中明显的 JSON 语法错误（如缺失的括号、逗号）。
 3. 将修复后的内容另存为 `groups.json`（覆盖已存在的同名文件）。
 4. 确认 `groups.json` 能被 JSON 解析器正常解析后，重新启动服务。
+
+
+## 导出为 Excel
+
+`export_xlsx.py` 用于把 `groups.json` 导出成 xlsx 表格，方便打印或交给教务系统。
+它只读取数据、不修改 `groups.json`，因此可以在服务运行期间随时执行。
+
+### 使用方法
+
+```bash
+# 默认：读取同目录的 groups.json，生成同目录的 groups.xlsx
+python export_xlsx.py
+
+# 指定输出文件名
+python export_xlsx.py -o 分组名单.xlsx
+
+# 指定其它数据文件
+python export_xlsx.py D:\备份\groups.json -o D:\备份\分组名单.xlsx
+
+# 查看全部参数
+python export_xlsx.py -h
+```
+
+### 输出格式
+
+表头固定为 `序号 | 学生1 | 学生2`：
+
+| 序号 | 学生1 | 学生2 |
+| --- | --- | --- |
+| 1 | 王五 | 赵六 |
+| 2 | Alice | Bob |
+| 3 | 张三 | 李四 |
+
+说明：
+
+- 记录按原始 `id` 升序排列，`序号` 则按导出顺序从 1 连续编号，因此不会出现跳号；
+- `created_at`（提交时间）不写入表格，如需要可自行在 `build_workbook()` 中增加一列；
+- 表格已设置表头加粗填充、自适应列宽、冻结首行与自动筛选，可直接在 Excel 中按姓名筛选。
+
+### 异常处理
+
+脚本沿用 `app.py` 的"绝不静默降级"原则：数据文件有问题时**报错并退出（退出码 1）**，
+不会生成一张空表让人误以为班级无人填报。
+
+| 情况 | 输出 |
+| --- | --- |
+| 数据文件不存在 | `导出失败：找不到数据文件：……` |
+| JSON 语法错误 | `导出失败：数据文件不是合法的 JSON：……（第 x 行第 y 列）` |
+| 顶层结构不是数组 | `导出失败：数据文件格式异常：顶层应为列表……` |
+| 某条记录缺少姓名 | `导出失败：第 n 条记录缺少学生姓名……` |
+| 输出文件被 Excel 占用 | `导出失败：写入失败：……（若该文件正在 Excel 中打开，请先关闭再重试）` |
+
+数据文件为空（`[]`）不是错误：会正常生成一张只有表头的表格，并提示"共导出 0 条分组记录"。
+
+> 脚本以 `utf-8-sig` 读取数据文件，因此即使 `groups.json` 被记事本等编辑器
+> 保存成了带 BOM 的 UTF-8，也能正常解析。
 
 
 ## 配置说明
