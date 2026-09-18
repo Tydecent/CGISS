@@ -9,7 +9,8 @@
 ---
 
 ## 项目背景
-
+如图。
+![项目背景示意图](assets/ProjectBackground.jpg)
 
 ## 功能特性
 
